@@ -1,0 +1,88 @@
+# NOTE: This docker-compose.yml is meant to be just an example of how
+# you could accomplish this on your own. It is not intended to work in
+# all use-cases and must be adapted to fit your needs. This is merely
+# a guideline.
+
+# See docs.getsentry.com/on-premise/server/ for full
+# instructions
+
+version: '2'
+services:
+  sentry-base:
+    restart: unless-stopped
+    build: .
+    environment:
+      # Run `docker-compose run web config generate-secret-key`
+      # to get the SENTRY_SECRET_KEY value.
+      SENTRY_SECRET_KEY: ${SENTRY_SECRET_KEY}
+      SENTRY_MEMCACHED_HOST: sentry-memcached
+      SENTRY_REDIS_HOST: sentry-redis
+      SENTRY_POSTGRES_HOST: sentry-postgres
+      SENTRY_EMAIL_HOST: sentry-smtp
+    volumes:
+      - ./data/sentry:/var/lib/sentry/files
+
+  sentry-smtp:
+    restart: unless-stopped
+    image: tianon/exim4
+
+  sentry-memcached:
+    restart: unless-stopped
+    image: memcached:1.4
+
+  sentry-redis:
+    restart: unless-stopped
+    image: redis:3.2-alpine
+
+  sentry-postgres:
+    restart: unless-stopped
+    image: postgres:9.5
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  sentry-web:
+    restart: unless-stopped
+    extends: sentry-base
+    # links:
+    #   - sentry-redis
+    #   - sentry-postgres
+    #   - sentry-memcached
+    #   - sentry-smtp
+    labels:
+      - traefik.backend=sentry-web
+      - traefik.docker.network=traefik_proxy
+      - traefik.frontend.rule=Host:sentry.daton.it
+      - "traefik.frontend.auth.basic=admin:$$apr1$$C8NRNJAO$$L.GDF3K7LfFut5CIa5bRM/"
+      - traefik.port=9000
+    networks:
+      - traefik_proxy
+      - sentry_platform
+  sentry-cron:
+    restart: unless-stopped
+    extends: sentry-base
+    command: run cron
+    # links:
+    #   - sentry-redis
+    #   - sentry-postgres
+    #   - sentry-memcached
+    #   - sentry-smtp
+    networks:
+      - sentry_platform
+  sentry-worker:
+    restart: unless-stopped
+    extends: sentry-base
+    command: run worker
+    # links:
+    #   - sentry-redis
+    #   - sentry-postgres
+    #   - sentry-memcached
+    #   - sentry-smtp
+    networks:
+      - sentry_platform
+
+networks:
+  traefik_proxy:
+    external: true
+  sentry_platform:
+    external: false
+    driver: bridge
