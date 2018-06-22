@@ -8,48 +8,62 @@
 
 version: '2'
 services:
-  sentry-base:
+  base:
+    hostname: base
     restart: unless-stopped
     build: .
     environment:
       # Run `docker-compose run web config generate-secret-key`
       # to get the SENTRY_SECRET_KEY value.
       SENTRY_SECRET_KEY: ${SENTRY_SECRET_KEY}
-      SENTRY_MEMCACHED_HOST: sentry-memcached
-      SENTRY_REDIS_HOST: sentry-redis
-      SENTRY_POSTGRES_HOST: sentry-postgres
-      SENTRY_EMAIL_HOST: sentry-smtp
+      SENTRY_MEMCACHED_HOST: memcached
+      SENTRY_REDIS_HOST: redis
+      SENTRY_POSTGRES_HOST: postgres
+      SENTRY_EMAIL_HOST: smtp
     volumes:
       - ./data/sentry:/var/lib/sentry/files
 
-  sentry-smtp:
+  smtp:
+    hostname: smtp
     restart: unless-stopped
     image: tianon/exim4
+    networks:
+      - sentry_platform
 
-  sentry-memcached:
+  memcached:
+    hostname: memcached
     restart: unless-stopped
     image: memcached:1.4
+    networks:
+      - sentry_platform    
 
-  sentry-redis:
+  redis:
+    hostname: redis
     restart: unless-stopped
     image: redis:3.2-alpine
+    networks:
+      - sentry_platform    
 
-  sentry-postgres:
+  postgres:
+    hostname: postgres
     restart: unless-stopped
     image: postgres:9.5
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - sentry_platform
 
-  sentry-web:
+  web:
+    hostname: web
     restart: unless-stopped
-    extends: sentry-base
+    extends: base
     # links:
     #   - sentry-redis
     #   - sentry-postgres
     #   - sentry-memcached
     #   - sentry-smtp
     labels:
-      - traefik.backend=sentry-web
+      - traefik.backend=web
       - traefik.docker.network=traefik_proxy
       - traefik.frontend.rule=Host:sentry.daton.it
       - "traefik.frontend.auth.basic=admin:$$apr1$$C8NRNJAO$$L.GDF3K7LfFut5CIa5bRM/"
@@ -57,9 +71,11 @@ services:
     networks:
       - traefik_proxy
       - sentry_platform
-  sentry-cron:
+  
+  cron:
+    hostname: cron
     restart: unless-stopped
-    extends: sentry-base
+    extends: base
     command: run cron
     # links:
     #   - sentry-redis
@@ -68,9 +84,11 @@ services:
     #   - sentry-smtp
     networks:
       - sentry_platform
-  sentry-worker:
+
+  worker:
+    hostname: worker
     restart: unless-stopped
-    extends: sentry-base
+    extends: base
     command: run worker
     # links:
     #   - sentry-redis
