@@ -22,6 +22,8 @@ services:
       SENTRY_EMAIL_HOST: smtp
     volumes:
       - ./data/sentry:/var/lib/sentry/files
+    networks:
+      - sentry_platform
 
   smtp:
     hostname: smtp
