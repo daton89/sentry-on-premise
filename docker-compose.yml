@@ -57,11 +57,11 @@ services:
     hostname: web
     restart: unless-stopped
     extends: base
-    # links:
-    #   - sentry-redis
-    #   - sentry-postgres
-    #   - sentry-memcached
-    #   - sentry-smtp
+    links:
+      - redis
+      - postgres
+      - memcached
+      - smtp
     labels:
       - traefik.backend=web
       - traefik.docker.network=traefik_proxy
@@ -77,11 +77,11 @@ services:
     restart: unless-stopped
     extends: base
     command: run cron
-    # links:
-    #   - sentry-redis
-    #   - sentry-postgres
-    #   - sentry-memcached
-    #   - sentry-smtp
+    links:
+      - redis
+      - postgres
+      - memcached
+      - smtp
     networks:
       - sentry_platform
 
@@ -90,11 +90,11 @@ services:
     restart: unless-stopped
     extends: base
     command: run worker
-    # links:
-    #   - sentry-redis
-    #   - sentry-postgres
-    #   - sentry-memcached
-    #   - sentry-smtp
+    links:
+      - redis
+      - postgres
+      - memcached
+      - smtp
     networks:
       - sentry_platform
 
